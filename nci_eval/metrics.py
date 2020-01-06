@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 
 def precision_from_tpr_fpr(tpr, fpr, positive_prior):
@@ -29,10 +30,7 @@ def max_width_of_precision_confidence_interval(tpr, fpr, sigma_tpr, sigma_fpr):
     Returns tuple (argmax_positive_prevalence, interval_width)
     """
     max_delta = (-1, -1)
-    n = 10000
-    for p in range(n):
-        incr = math.pow(10000000, 1/n)
-        pp = 1 / math.pow(incr, p)
+    for pp in np.logspace(-7, 1, 10000):
         _, l, h = precision_with_confidence_interval(tpr, fpr, sigma_tpr, sigma_fpr, pp)
         delta = (pp, h-l)
         if delta[1] > max_delta[1]:
