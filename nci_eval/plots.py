@@ -1,32 +1,75 @@
 import nci_eval.metrics as metrics
 import numpy as np
 import matplotlib.pyplot as plt
+from abc import ABC
 
-class PositivePriorPraucPlot:
-    def plot(self,
-        classifiers_tprs,
-        classifiers_fprs,
-        classifiers_names,
-        positive_priors=np.logspace(-7, -1, 500),
-        figsize=(8, 3)):
-        """
-        Creates plot for Precision-Recall-AUC vs Positive Prior. The plot supports multiple classifiers.
-        For example if we had 2 classifiers A and B we need to set the arguments:
-            classifiers_tprs = [[tpr_A1, tpr_A2, tpr_A3], [tpr_B1, tpr_B2, tpr_B3]]
-            classifiers_fprs = [[fpr_A1, fpr_A2, fpr_A3], [fpr_B1, fpr_B2, fpr_B3]]
-            classifiers_names = ["A", "B"]
-        The argument positive_priors specifies the points on the x-axis.
-        """
-        if len(set([len(classifiers_tprs), len(classifiers_fprs), len(classifiers_names)])) > 1:
-            raise ValueError("classifiers_tpr, classifiers_fpr, classifiers_names lenghts should be equal.")
 
+class _PlotFromCurve(ABC):
+    def __init__(self):
+        self.classifiers_tprs = []
+        self.classifiers_fprs = []
+        self.classifiers_names = []
+
+    def add(self, tprs, fprs, name):
+        """
+        Add new classifier to the plot.
+        :param tprs: list of true-positive-rates for classifier working points (e.g. on ROC curve)
+        :param fprs: list of false-positive-rates for classifier working points (e.g. on ROC curve)
+        :param name: name of the classifier as it will be displayed in legend.
+        """
+        if len(tprs) != len(fprs):
+            raise ValueError("len(tprs) and len(fprs) does not match for classifier: %s" % name)
+        self.classifiers_tprs.append(tprs)
+        self.classifiers_fprs.append(fprs)
+        self.classifiers_names.append(name)
+        return self
+
+class _PlotFromOperatingPoint(ABC):
+    def __init__(self):
+        self.classifiers_tpr = []
+        self.classifiers_fpr = []
+        self.classifiers_sigma_tpr = []
+        self.classifiers_sigma_fpr = []
+        self.classifiers_names = []
+
+    def add(self, tpr, fpr, name, sigma_tpr=None, sigma_fpr=None):
+        """
+        Add new classifier to the plot. Arguments related to sigma_tpr and sigma_fpr is set allow drawing of the
+        (LB(\eta), UB(\eta)) confidence interval. More details in the paper.
+
+        :param tpr: value of true positive rate
+        :param fpr: value of false positive rate
+        :param name: name of the classifier as it will be displayed in legend
+        :param sigma_tpr: either value of sigma for true positive rate or None if it was not measured
+        :param sigma_fpr: either value of sigma for false positive rate or None if it was not measured
+        """
+        self.classifiers_tpr.append(tpr)
+        self.classifiers_fpr.append(fpr)
+        self.classifiers_names.append(name)
+        self.classifiers_sigma_tpr.append(0 if sigma_tpr is None else sigma_tpr)
+        self.classifiers_sigma_fpr.append(0 if sigma_fpr is None else sigma_fpr)
+        return self
+
+
+class PositivePriorPraucPlot(_PlotFromCurve):
+    """
+    Creates plot for Precision-Recall-AUC vs Positive Prior. The plot supports multiple classifiers.
+
+    Add them with the .add method and then draw the plot with the .plot method.
+    """
+
+    def plot(self, positive_priors=np.logspace(-7, -1, 500), figsize=(8, 3)):
+        """
+        :param positive_priors: specifies the points on the x-axis
+        :param figsize: figure size as in matplotlib
+        """
         fig = plt.figure(figsize=figsize)
 
-        for i in range(len(classifiers_names)):
-            tprs, fprs = classifiers_tprs[i], classifiers_fprs[i]
+        for i in range(len(self.classifiers_names)):
+            tprs, fprs = self.classifiers_tprs[i], self.classifiers_fprs[i]
             aucs = [self._pr_auc(tprs, fprs, pp) for pp in positive_priors]
             plt.plot(positive_priors, aucs,
-                label=classifiers_names[i], c=_color(i), ls=_line_style(i))
+                label=self.classifiers_names[i], c=_color(i), ls=_line_style(i))
 
         plt.title('Impact of Positive prevalence on PR-AUC')
         plt.xlabel('Positive prevalence ($\eta$)')
@@ -40,52 +83,22 @@ class PositivePriorPraucPlot:
             return np.trapz(prec, tprs)
 
 
-class PositivePriorPrecisionPlot:
-    def plot(self,
-        classifiers_tpr,
-        classifiers_fpr,
-        classifiers_names,
-        classifiers_sigma_tpr=None,
-        classifiers_sigma_fpr=None,
-        positive_priors=np.logspace(-7, -1, 500),
-        figsize=(8, 3)):
+class PositivePriorPrecisionPlot(_PlotFromOperatingPoint):
+    """
+    Creates plot for Precision vs Positive Prior (P3 curve). The plot supports multiple classifiers.
+
+    Add them with the .add method and then draw the plot with the .plot method.
+    """
+
+    def plot(self, positive_priors=np.logspace(-7, -1, 500), figsize=(8, 3)):
         """
-        Creates plot for Precision vs Positive Prior (P3 curve). The plot supports multiple classifiers.
-        For example if we had 2 classifiers A and B we need to set the arguments:
-            classifiers_tpr = [tpr_A, tpr_B]
-            classifiers_fpr = [fpr_A, fpr_B]
-            classifiers_sigma_tpr = [sigma_tpr_A, sigma_tpr_B] or None
-            classifiers_sigma_fpr = [sigma_fpr_A, sigma_fpr_B] or None
-            classifiers_names = ["A", "B"]
-
-        The argument positive_priors specifies the points on the x-axis.
-
-        Arguments related to sigma_tpr and sigma_fpr is set allow drawing of the alpha^2 confidence interval.
-        More details in the paper.
+        :param positive_priors: specifies the points on the x-axis
+        :param figsize: figure size as in matplotlib
         """
-        if len(set([len(classifiers_tpr), len(classifiers_fpr), len(classifiers_names)])) > 1:
-            raise ValueError("classifiers_tpr, classifiers_fpr, classifiers_names lenghts should be equal.")
-        if classifiers_sigma_tpr is not None and len(classifiers_sigma_tpr) != len(classifiers_names):
-            raise ValueError("classifiers_sigma_tpr should be None or it's length must be equal" +
-                " to the number of classifiers. If unknown for a specific classifier 0 value can be used.")
-        if classifiers_sigma_fpr is not None and len(classifiers_sigma_fpr) != len(classifiers_names):
-            raise ValueError("classifiers_sigma_fpr should be None or it's length must be equal" +
-                " to the number of classifiers. If unknown for a specific classifier 0 value can be used.")
-
-        if classifiers_sigma_tpr is None:
-            classifiers_sigma_tpr = [0] * len(classifiers_names)
-        if classifiers_sigma_fpr is None:
-            classifiers_sigma_fpr = [0] * len(classifiers_names)
-
         fig = plt.figure(figsize=figsize)
 
-        for i in range(len(classifiers_names)):
-            tpr, fpr = classifiers_tpr[i], classifiers_fpr[i]
-            s_tpr, s_fpr = classifiers_sigma_tpr[i], classifiers_sigma_fpr[i]
-            pci = [metrics.precision_with_confidence_interval(tpr, fpr, s_tpr, s_fpr, pp) for pp in positive_priors]
-            plt.plot(positive_priors, [v[0] for v in pci],
-                label='%s TPR=%.1f FPR=%g' % (classifiers_names[i], tpr, fpr), c=_color(i), ls=_line_style(i))
-            plt.fill_between(positive_priors, [v[1] for v in pci], [v[2] for v in pci], facecolor='gray', alpha=0.5)
+        for i in range(len(self.classifiers_names)):
+            self._create_ith_plot(i, positive_priors)
 
         plt.title('Impact of Positive prevalence on Precision')
         plt.xlabel('Positive prevalence ($\eta$)')
@@ -94,32 +107,31 @@ class PositivePriorPrecisionPlot:
         _set_plot_styling()
         return fig
 
+    def _create_ith_plot(self, i, positive_priors):
+        tpr, fpr = self.classifiers_tpr[i], self.classifiers_fpr[i]
+        s_tpr, s_fpr = self.classifiers_sigma_tpr[i], self.classifiers_sigma_fpr[i]
+        pci = [metrics.precision_with_confidence_interval(tpr, fpr, s_tpr, s_fpr, pp) for pp in positive_priors]
+        plt.fill_between(positive_priors, [v[1] for v in pci], [v[2] for v in pci], facecolor='gray', alpha=0.5)
+        plt.plot(positive_priors, [v[0] for v in pci],
+            label='%s TPR=%.1f FPR=%g' % (self.classifiers_names[i], tpr, fpr), c=_color(i), ls=_line_style(i))
 
-class PositivePriorF1ScorePlot:
-    def plot(self,
-        classifiers_tpr,
-        classifiers_fpr,
-        classifiers_names,
-        positive_priors=np.logspace(-7, -1, 500),
-        figsize=(8, 3)):
-        """
-        Creates plot for F1 score vs Positive Prior. The plot supports multiple classifiers.
-        For example if we had 2 classifiers A and B we need to set the arguments:
-            classifiers_tpr = [tpr_A, tpr_B]
-            classifiers_fpr = [fpr_A, fpr_B]
-            classifiers_names = ["A", "B"]
-        The argument positive_priors specifies the points on the x-axis.
-        """
-        if len(set([len(classifiers_tpr), len(classifiers_fpr), len(classifiers_names)])) > 1:
-            raise ValueError("classifiers_tpr, classifiers_fpr, classifiers_names lenghts should be equal.")
 
+class PositivePriorF1ScorePlot(_PlotFromOperatingPoint):
+    """
+    Creates plot for F1-Score vs Positive Prior. The plot supports multiple classifiers.
+
+    Add them with the .add method and then draw the plot with the .plot method.
+    """
+
+    def plot(self, positive_priors=np.logspace(-7, -1, 500), figsize=(8, 3)):
+        """
+        :param positive_priors: specifies the points on the x-axis
+        :param figsize: figure size as in matplotlib
+        """
         fig = plt.figure(figsize=figsize)
 
-        for i in range(len(classifiers_names)):
-            tpr, fpr = classifiers_tpr[i], classifiers_fpr[i]
-            f1 = [self._f1_score_for_positive_prior(tpr, fpr, pp) for pp in positive_priors]
-            plt.plot(positive_priors, f1,
-                label='%s TPR=%.1f FPR=%g' % (classifiers_names[i], tpr, fpr), c=_color(i), ls=_line_style(i))
+        for i in range(len(self.classifiers_names)):
+            self._create_ith_plot(i, positive_priors)
 
         plt.title('Impact of Positive prevalence on F1 score')
         plt.xlabel('Positive prevalence ($\eta$)')
@@ -128,38 +140,41 @@ class PositivePriorF1ScorePlot:
         _set_plot_styling()
         return fig
 
+    def _create_ith_plot(self, i, positive_priors):
+        tpr, fpr = self.classifiers_tpr[i], self.classifiers_fpr[i]
+        s_tpr, s_fpr = self.classifiers_sigma_tpr[i], self.classifiers_sigma_fpr[i]
+        f1ci = [self._f1_score_for_positive_prior_with_ci(tpr, fpr, s_tpr, s_fpr, pp) for pp in positive_priors]
+        plt.fill_between(positive_priors, [v[1] for v in f1ci], [v[2] for v in f1ci], facecolor='gray', alpha=0.5)
+        plt.plot(positive_priors, [v[0] for v in f1ci],
+            label='%s TPR=%.1f FPR=%g' % (self.classifiers_names[i], tpr, fpr), c=_color(i), ls=_line_style(i))
+
     def _f1_score(self, tpr, prec):
         return 2.0 * tpr * prec / (tpr + prec)
 
-    def _f1_score_for_positive_prior(self, tpr, fpr, positive_prior):
-        return self._f1_score(tpr, metrics.precision_from_tpr_fpr(tpr, fpr, positive_prior))
+    def _f1_score_for_positive_prior_with_ci(self, tpr, fpr, s_tpr, s_fpr, positive_prior):
+        v, low, high = metrics.precision_with_confidence_interval(tpr, fpr, s_tpr, s_fpr, positive_prior)
+        return self._f1_score(tpr, v), self._f1_score(tpr, low), self._f1_score(tpr, high)
 
 
-class RocPlot:
-    def plot(self,
-        classifiers_tprs,
-        classifiers_fprs,
-        classifiers_names,
-        log_x_axis=True,
-        figsize=(6, 4)):
+class RocPlot(_PlotFromCurve):
+    """
+    Creates classic ROC plot with either log-scaled axis or not. The plot supports multiple classifiers.
+
+    Add them with the .add method and then draw the plot with the .plot method.
+    """
+
+    def plot(self, log_x_axis=True, figsize=(6, 4)):
         """
-        Creates classic ROC plot with either log-scaled axis or not. The plot supports multiple classifiers.
-
-        For example if we had 2 classifiers A and B we need to set the arguments:
-            classifiers_tprs = [[tpr_A1, tpr_A2, tpr_A3], [tpr_B1, tpr_B2, tpr_B3]]
-            classifiers_fprs = [[fpr_A1, fpr_A2, fpr_A3], [fpr_B1, fpr_B2, fpr_B3]]
-            classifiers_names = ["A", "B"]
+        :param log_x_axis: Determines whether the x-axis will be log-scaled
+            (advised for classifiers suited for imbalanced problems)
+        :param figsize: figure size as in matplotlib
         """
-        if len(set([len(classifiers_tprs), len(classifiers_fprs), len(classifiers_names)])) > 1:
-            raise ValueError("classifiers_tprs, classifiers_fprs, classifiers_names lenghts should be equal.")
-
         fig = plt.figure(figsize=figsize)
 
-        for i in range(len(classifiers_names)):
-            tprs, fprs = classifiers_tprs[i], classifiers_fprs[i]
-            if len(tprs) != len(fprs):
-                raise ValueError("len(tprs) and len(fprs) does not match for classifier: %s" % (classifiers_names[i]))
-            plt.plot(fprs, tprs, label=classifiers_names[i], c=_color(i), ls=_line_style(i))
+        for i in range(len(self.classifiers_names)):
+            tprs, fprs = self.classifiers_tprs[i], self.classifiers_fprs[i]
+            plt.plot(fprs, tprs, label=self.classifiers_names[i], c=_color(i), ls=_line_style(i))
+
         if log_x_axis:
             plt.semilogx()
         plt.title('ROC Curve')
@@ -169,40 +184,35 @@ class RocPlot:
         return fig
 
 
-class PrecisionRecallPlot:
-    def plot(self,
-        classifiers_tprs,
-        classifiers_fprs,
-        classifiers_names,
-        positive_prior,
-        figsize=(6, 4)):
-        """
-        Creates classic ROC plot with either log-scaled axis or not. The plot supports multiple classifiers.
+class PrecisionRecallPlot(_PlotFromCurve):
+    """
+    Creates Precision-Recall curve for a given positive prior. The plot supports multiple classifiers.
 
-        For example if we had 2 classifiers A and B we need to set the arguments:
-            positive_prior = desired_prior
-            classifiers_tprs = [[tpr_A1, tpr_A2, tpr_A3], [tpr_B1, tpr_B2, tpr_B3]]
-            classifiers_fprs = [[fpr_A1, fpr_A2, fpr_A3], [fpr_B1, fpr_B2, fpr_B3]]
-            classifiers_names = ["A", "B"]
-        """
-        if len(set([len(classifiers_tprs), len(classifiers_fprs), len(classifiers_names)])) > 1:
-            raise ValueError("classifiers_tprs, classifiers_fprs, classifiers_names lenghts should be equal.")
+    Add them with the .add method and then draw the plot with the .plot method.
+    """
 
+    def plot(self, positive_prior, figsize=(6, 4)):
+        """
+        :param positive_prior: desired positive prior for the plot
+        :param figsize: figure size as in matplotlib
+        """
         fig = plt.figure(figsize=figsize)
 
-        for i in range(len(classifiers_names)):
-            tprs, fprs = classifiers_tprs[i], classifiers_fprs[i]
-            if len(tprs) != len(fprs):
-                raise ValueError("len(tprs) and len(fprs) does not match for classifier: %s" % (classifiers_names[i]))
-            prec = [metrics.precision_from_tpr_fpr(tpr, fpr, positive_prior) for (tpr, fpr) in zip(tprs, fprs)]
-            auc = np.trapz(prec, tprs)
-            plt.plot(tprs, prec, label="%s [AUPRC=%.2f]" % (classifiers_names[i], auc), c=_color(i), ls=_line_style(i))
+        for i in range(len(self.classifiers_names)):
+            self._create_ith_plot(i, positive_prior)
 
         plt.title('Area under PR Curve at $\eta$ = %g' % (positive_prior))
         plt.xlabel('Recall')
         plt.ylabel('Precision')
         _set_plot_styling()
         return fig
+
+    def _create_ith_plot(self, i, positive_prior):
+        tprs, fprs, name = self.classifiers_tprs[i], self.classifiers_fprs[i], self.classifiers_names[i]
+        prec = [metrics.precision_from_tpr_fpr(tpr, fpr, positive_prior) for (tpr, fpr) in zip(tprs, fprs)]
+        auc = np.trapz(prec, tprs)
+        plt.plot(tprs, prec, label="%s [AUPRC=%.2f]" % (name, auc), c=_color(i), ls=_line_style(i))
+
 
 def _set_plot_styling():
     plt.legend()
