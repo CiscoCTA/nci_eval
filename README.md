@@ -15,7 +15,7 @@ The repository is organized in the following way:
   - plots.py: Contains classes that are able to draw the plots that are in the paper and that might be also useful for evaluation of your classifiers. Although the plots allow some level of customization it is possible that you might want to customize your plots differently. In that case, you can use the code as inspiration for your own or if it would make sense to extend the methods create an Issue or pull request.
 - notebooks: Contains examples of the uses of metrics and plots in the library.
   - plot_pr_auc.ipynb: Example of PositivePrevalence-PR-AUC plot. Also contains ROC curves and PR curves examples.
-  - positive_prior_vs_f1_score_plot.ipynb: Example of PositivePrevalence-F1Score plot and P3 plots. Also contains example of P3 plot with confidence interval and the computation for the max width ofconfidence interval mentioned in the paper in footnote 8.
+  - positive_prior_vs_f1_score_plot.ipynb: Example of PositivePrevalence-F1Score plot and P3 plots. Also contains example of P3 plot with confidence interval and the computation for the max width of confidence interval mentioned in the paper in footnote 8.
   - plot_subsampling_imagenet.ipynb: Code for the experiment in paper section 5.1 with ImageNet, ResNet-50 and the effects of subsampling on the evaluation.
 - test: Tests for the code in nci_eval dir. Plots are not tested here, but for their usecases see the notebooks.
 - supplementary.pdf: Supplementary material with proof for Theorem 1.
