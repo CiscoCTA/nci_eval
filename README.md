@@ -27,4 +27,4 @@ The repository is organized in the following way:
 ## Contacts
 
 Jan Brabec (janbrabe@cisco.com), Cisco Cognitive Intelligence
-Tomas Komare (tomkomar@cisco.com), Cisco Cognitive Intelligence
+Tomas Komarek (tomkomar@cisco.com), Cisco Cognitive Intelligence
