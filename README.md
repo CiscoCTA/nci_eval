@@ -19,9 +19,18 @@ The repository is organized in the following way:
   - plot_subsampling_imagenet.ipynb: Code for the experiment in paper section 5.1 with ImageNet, ResNet-50 and the effects of subsampling on the evaluation.
 - test: Tests for the code in nci_eval dir. Plots are not tested here, but for their usecases see the notebooks.
 
-## Setup & Example
+## Installation & Examples
 
--- TODO: prepare pip package and example
+The source code is currently hosted on GitHub at:
+https://github.com/CiscoCTA/nci_eval
+
+You can also use PyPI:
+```sh
+# or PyPI
+pip install nci_eval
+```
+
+For examples of use-cases see the notebooks and test folders.
 
 ## Contacts
 
