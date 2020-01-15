@@ -26,7 +26,6 @@ https://github.com/CiscoCTA/nci_eval
 
 You can also use PyPI:
 ```sh
-# or PyPI
 pip install nci_eval
 ```
 
