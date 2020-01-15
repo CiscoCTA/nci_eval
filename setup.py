@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nci_eval',
-    version='1.0',
+    version='1.0.0',
     description='Supplementary code and materials for paper ' +
         '"On Model Evaluation under Non-constant Class Imbalance" by Brabec et al.',
     url="https://github.com/CiscoCTA/nci_eval",
