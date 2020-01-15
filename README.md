@@ -18,7 +18,6 @@ The repository is organized in the following way:
   - positive_prior_vs_f1_score_plot.ipynb: Example of PositivePrevalence-F1Score plot and P3 plots. Also contains example of P3 plot with confidence interval and the computation for the max width of confidence interval mentioned in the paper in footnote 8.
   - plot_subsampling_imagenet.ipynb: Code for the experiment in paper section 5.1 with ImageNet, ResNet-50 and the effects of subsampling on the evaluation.
 - test: Tests for the code in nci_eval dir. Plots are not tested here, but for their usecases see the notebooks.
-- supplementary.pdf: Supplementary material with proof for Theorem 1.
 
 ## Setup & Example
 
