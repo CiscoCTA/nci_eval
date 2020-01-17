@@ -1,6 +1,6 @@
 # nci_eval
 
-**Supplementary code and materials for paper "On Model Evaluation under Non-constant Class Imbalance"**
+**Supplementary code and materials for paper [On Model Evaluation under Non-constant Class Imbalance](https://arxiv.org/abs/2001.05571)
 
 ## Abstract
 
